@@ -1,0 +1,1 @@
+This folder will store MetaSQL Statements Which is a Type of pre-parsed SQL statement used by Xtuple

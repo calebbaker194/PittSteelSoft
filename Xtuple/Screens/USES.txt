@@ -1,0 +1,1 @@
+This folder stores UI files for the Xtuple desktop QT
