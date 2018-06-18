@@ -1,0 +1,4 @@
+﻿-- Group: PlannedLoad
+-- Name:  InsertShipItems
+-- Notes: 
+INSERT INTO plannedshipitem (SELECT <? value('plannedshipitem_id')?>,<? value('plannedshiphead_id')?>,coitem_qtyord,<? value('coitem_id')?>,<? value('plannedshipitem_lineitem')?> FROM coitem WHERE coitem_id=<? value('coitem_id')?>)

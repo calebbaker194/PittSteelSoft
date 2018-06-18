@@ -1,0 +1,6 @@
+﻿-- Group: PlannedLoad
+-- Name:  DeletePlannedLoad
+-- Notes: To remove a planned load
+DELETE FROM plannedshiphead JOIN plannedshipitem ON(plannedshiphead_id=plannedshipitem_plannedshiphead_id)
+WHERE 
+	plannedshiphead=<? value('plannedshiphead')?>

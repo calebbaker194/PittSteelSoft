@@ -1,0 +1,29 @@
+﻿-- Group: PlannedLoad
+-- Name:  loadquery
+-- Notes: to pull data up in load pane when planning loads
+SELECT 
+	coitem_id,
+	(cohead_number ||'-' || coitem_linenumber) AS salesorder,
+	coitem_id AS coitemid,
+	cohead_shiptoname AS customer,
+	item_descrip1 AS descrip,
+	(coitem_qtyord*item_prodweight*coitem_qty_invuomratio)AS weight,	
+	coitem_qtyord AS qty,
+	coitem_linenumber AS lineNumber,
+	CASE WHEN coitem_qty_uom_id='4'
+	THEN 'LB'
+	ELSE 'EA'
+	END AS uom
+	
+	
+	
+FROM coitem
+JOIN cohead ON(coitem_cohead_id=cohead_id)
+JOIN itemsite ON(coitem_itemsite_id=itemsite_id)
+JOIN item ON(itemsite_item_id=item_id)	
+JOIN plannedshipitem ON(plannedshipitem_coitem_id=coitem_id)
+WHERE cohead_status='O'
+<?if exists('plannedshiphead_id')?> 
+AND (coitem_id  IN (SELECT plannedshipitem_coitem_id  FROM plannedshipitem WHERE plannedshipitem_plannedshiphead_id=<? value('plannedshiphead_id')?>)) 
+<? endif ?>
+ORDER BY cohead_orderdate, coitem_cohead_id ,coitem_linenumber

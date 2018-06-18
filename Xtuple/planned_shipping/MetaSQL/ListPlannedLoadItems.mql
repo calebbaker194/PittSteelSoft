@@ -1,0 +1,18 @@
+﻿-- Group: PlannedLoad
+-- Name:  ListPlannedLoadItems
+-- Notes: this is to list the line items for a planned order
+SELECT 
+	plannedshipitem_id,
+	plannedshipitem_linenumber AS lineitem,
+	item_number AS itemNum,
+	item_descrip1 AS descrip,
+	plannedshipitem_qty AS weight,
+	cust_name AS customer
+	
+FROM
+	plannedshipitem 
+LEFT JOIN item ON (item_id=plannedshipitem_item_id)
+LEFT JOIN custinfo ON (plannedshipitem_cust_id=cust_id)
+
+WHERE
+	plannedshipitem_plannedshiphead_id=<? value('plannedshiphead_id')?>

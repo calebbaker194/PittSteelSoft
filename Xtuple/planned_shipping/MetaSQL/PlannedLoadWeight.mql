@@ -1,0 +1,25 @@
+﻿-- Group: PlannedLoad
+-- Name:  PlannedLoadWeight
+-- Notes: To get the weight of items based on UOM
+SELECT 
+	coitem_qty_invuomratio,
+	plannedshipitem_uom,
+	item_prodweight,
+	CASE WHEN plannedshipitem_uom='EA'
+	   THEN(item_prodweight*coitem_qty_invuomratio*plannedshipitem_qty)
+	   ELSE(plannedshipitem_qty)
+	END AS weight
+
+FROM      plannedshipitem
+     JOIN item ON (item_id = plannedshipitem_item_id)
+     JOIN	itemsite ON (itemsite_item_id=item_id)
+     JOIN coitem ON (coitem_itemsite_id=itemsite_id)
+
+WHERE
+	plannedshipitem_plannedshiphead_id=<? value('plannedshiphead_id')?>
+
+GROUP BY plannedshipitem_id,item_prodweight,coitem_qty_invuomratio
+
+
+
+

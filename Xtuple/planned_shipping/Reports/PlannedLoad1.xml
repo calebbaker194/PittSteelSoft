@@ -1,0 +1,1247 @@
+﻿<!DOCTYPE openRPTDef>
+<report>
+ <title>Packing List</title>
+ <name>PackingList</name>
+ <description>Hybrid Packing List - use the shiphead_id if it is passed but use the order id and type if they're passed but not shiphead_id - Shows Lot/Serial</description>
+ <parameter default="4" type="string" name="plannedshiphead_id" active="true" listtype="static">
+  <description></description>
+ </parameter>
+ <grid>
+  <snap/>
+  <show/>
+  <x>0.05</x>
+  <y>0.05</y>
+ </grid>
+ <size>Letter</size>
+ <portrait/>
+ <topmargin>25</topmargin>
+ <bottommargin>25</bottommargin>
+ <rightmargin>25</rightmargin>
+ <leftmargin>25</leftmargin>
+ <querysource>
+  <name>head</name>
+  <sql>SELECT 
+	plannedshiphead_number,
+	plannedshiphead_driver AS driver,
+	plannedshiphead_datetoship AS shipdate
+FROM plannedshiphead
+WHERE plannedshiphead_id = &lt;?value('plannedshiphead_id')?></sql>
+ </querysource>
+ <querysource>
+  <name>detail</name>
+  <sql>
+--CUSTOMER HEADER
+SELECT
+	cust_id,
+	cust_name AS cust,
+	cohead_shiptoname,
+	cohead_shiptoaddress1,
+	--
+	'' AS cohead_number,
+	--
+	'' AS linenumber,
+	'' AS ordered,
+	'' AS status,
+	'' AS toship,
+	'' AS uom,
+	'' AS itemid,
+	'' AS descrip,
+	'' AS weight,
+	'' AS conv,
+	--
+	cust_id AS orderbycus,
+	'-1' AS orderby
+FROM
+	plannedshiphead
+     JOIN plannedshipitem ON(plannedshiphead_id=plannedshipitem_plannedshiphead_id)
+     JOIN coitem ON(plannedshipitem_coitem_id=coitem_id)
+     JOIN cohead ON(coitem_cohead_id=cohead_id)
+     JOIN custinfo ON(cohead_cust_id=cust_id)
+
+WHERE
+	plannedshiphead_id=&lt;?value('plannedshiphead_id')?>
+
+GROUP BY cust_id,cohead_id
+
+UNION
+--SALES ORDER SUB REPORT
+SELECT
+	cust_id,
+	'' AS cust,
+	'' AS cohead_shiptoname,
+	'' AS cohead_shiptoaddress1,
+	--
+	'SO#' || cohead_number,
+	--
+	'' AS linenumber,
+	'' AS ordered,
+	'' AS status,
+	'' AS toship,
+	'' AS uom,
+	'' AS itemid,
+	'' AS descrip,
+	'' AS weight,
+	'' AS conv,
+	--
+	cust_id AS orderbycus,
+	cohead_id AS orderby
+FROM
+	plannedshiphead
+     JOIN plannedshipitem ON(plannedshiphead_id=plannedshipitem_plannedshiphead_id)
+     JOIN coitem ON(plannedshipitem_coitem_id=coitem_id)
+     JOIN cohead ON(coitem_cohead_id=cohead_id)
+     JOIN custinfo ON(cohead_cust_id=cust_id)
+
+WHERE
+	plannedshiphead_id=&lt;?value('plannedshiphead_id')?>
+
+UNION
+--LINE ITEM 
+SELECT
+	cust_id,
+	'' AS cust,
+	'' AS cohead_shiptoname,
+	'' AS cohead_shiptoaddress1,
+	--
+	'' AS cohead_number,
+	--
+	cohead_number||'-'||coitem_linenumber || '' AS linenumber,
+	CAST(coitem_qtyord -coitem_qtyshipped AS integer) || '' AS ordered,
+	CASE 
+	WHEN coitem_qtyord -coitem_qtyshipped = coitem_qtyord THEN ' '
+	WHEN (coitem_qtyord - coitem_qtyshipped)=0 THEN  'C'
+	ELSE 'B'
+	END AS status,
+	CAST(plannedshipitem_qty AS integer) || '' AS toship,
+	CASE
+	WHEN coitem_qty_uom_id=7 THEN 'EA'
+	ELSE 'LB'
+	END AS uom,
+	item_number || '' AS itemid,
+	item_descrip1 AS descrip,
+	( itemuomtouom(item_id,coitem_qty_uom_id,4,coitem_qtyord-coitem_qtyshipped) ) || '' AS weight,
+	CASE
+	WHEN coitem_qty_invuomratio&lt;>1
+	THEN coitem_qty_invuomratio || ''
+	ELSE ''
+	END AS conv,
+	--
+	cust_id AS orderbycus,
+	coitem_cohead_id AS orderby
+FROM
+	plannedshiphead
+     JOIN plannedshipitem ON(plannedshiphead_id=plannedshipitem_plannedshiphead_id)
+     JOIN coitem ON(plannedshipitem_coitem_id=coitem_id)
+     JOIN cohead ON(coitem_cohead_id=cohead_id)
+     JOIN custinfo ON(cohead_cust_id=cust_id)
+     JOIN itemsite ON(coitem_itemsite_id=itemsite_id)
+     JOIN item ON(itemsite_item_id=item_id)
+
+WHERE
+	plannedshiphead_id=&lt;?value('plannedshiphead_id')?>
+
+ORDER BY orderbycus,orderby,linenumber</sql>
+ </querysource>
+ <querysource>
+  <name>logo</name>
+  <sql>SELECT image_data 
+FROM image 
+WHERE ((image_name='logo'));</sql>
+ </querysource>
+ <querysource>
+  <name>substitution</name>
+  <sql>
+SELECT
+	cust_name,
+	cohead_shiptoname,
+	cohead_shiptoaddress1,
+	cohead_number || '-' ||coitem_linenumber AS SalesItem,
+	CAST(coitem_qtyord -coitem_qtyshipped AS integer) || '' AS onOrder,
+	CASE
+	WHEN coitem_qty_uom_id=7 THEN 'EA'
+	ELSE 'LB'
+	END AS uom,
+	item_number || '' AS itemid,
+	item_descrip1 AS descrip,
+	( itemuomtouom(item_id,coitem_qty_uom_id,4,coitem_qtyord -coitem_qtyshipped) ) || '' AS weight
+FROM
+	plannedshiphead
+     JOIN plannedshipitem ON(plannedshiphead_id=plannedshipitem_plannedshiphead_id)
+     JOIN coitem ON(plannedshipitem_coitem_id=coitem_id)
+     JOIN cohead ON(coitem_cohead_id=cohead_id)
+     JOIN custinfo ON(cohead_cust_id=cust_id)
+     JOIN itemsite ON(coitem_itemsite_id=itemsite_id)
+     JOIN item ON(itemsite_item_id=item_id)
+
+WHERE coitem_qtyord -coitem_qtyshipped>0
+
+&lt;?if exists('plannedshiphead_id')?> 
+AND NOT (coitem_id IN (SELECT plannedshipitem_coitem_id  FROM plannedshipitem WHERE plannedshipitem_plannedshiphead_id=&lt;? value('plannedshiphead_id')?>)) 
+&lt;? endif ?>
+
+-- TO BE CHANGED TO ZONE RULE MATCHING WHEN ZONES IMPLEMENTED
+AND (cust_id IN (SELECT cohead_cust_id FROM plannedshipitem JOIN coitem ON(coitem_id=plannedshipitem_coitem_id) JOIN cohead ON(coitem_cohead_id=cohead_id) WHERE plannedshipitem_plannedshiphead_id=&lt;? value('plannedshiphead_id')?>
+GROUP BY cohead_cust_id))
+
+ORDER BY cohead_orderdate
+
+&lt;? if exists('limit_num')?>
+LIMIT &lt;?value('limit_num')?>
+&lt;? else ?>
+LIMIT 5
+&lt;? endif ?>
+</sql>
+ </querysource>
+ <rpthead>
+  <height>220</height>
+  <image>
+   <rect>
+    <x>375</x>
+    <y>0</y>
+    <width>425</width>
+    <height>150</height>
+   </rect>
+   <mode>stretch</mode>
+   <data>
+    <query>logo</query>
+    <column>image_data</column>
+   </data>
+  </image>
+  <label>
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>300</width>
+    <height>50</height>
+   </rect>
+   <font>
+    <face>Arial</face>
+    <size>20</size>
+    <weight>bold</weight>
+   </font>
+   <left/>
+   <vcenter/>
+   <string>Load Plan</string>
+  </label>
+  <label>
+   <rect>
+    <x>5</x>
+    <y>155</y>
+    <width>70</width>
+    <height>20</height>
+   </rect>
+   <font>
+    <face>Arial</face>
+    <size>14</size>
+    <weight>normal</weight>
+   </font>
+   <left/>
+   <vcenter/>
+   <string>Load #:</string>
+  </label>
+  <line>
+   <xstart>2</xstart>
+   <ystart>181.333</ystart>
+   <xend>799</xend>
+   <yend>181.333</yend>
+   <weight>3</weight>
+  </line>
+  <label>
+   <rect>
+    <x>10</x>
+    <y>185</y>
+    <width>100</width>
+    <height>25</height>
+   </rect>
+   <font>
+    <face>MS Shell Dlg 2</face>
+    <size>12</size>
+    <weight>bold</weight>
+   </font>
+   <left/>
+   <top/>
+   <string>Customer:</string>
+  </label>
+  <line>
+   <xstart>1</xstart>
+   <ystart>212</ystart>
+   <xend>796</xend>
+   <yend>212</yend>
+   <weight>2</weight>
+  </line>
+  <field>
+   <rect>
+    <x>75</x>
+    <y>155</y>
+    <width>100</width>
+    <height>20</height>
+   </rect>
+   <font>
+    <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+    <size>10</size>
+    <weight>normal</weight>
+   </font>
+   <left/>
+   <vcenter/>
+   <data>
+    <query>head</query>
+    <column>plannedshiphead_number</column>
+   </data>
+   <format>%06.0f</format>
+  </field>
+  <field>
+   <rect>
+    <x>40</x>
+    <y>45</y>
+    <width>100</width>
+    <height>25</height>
+   </rect>
+   <font>
+    <face>MS Shell Dlg 2</face>
+    <size>10</size>
+    <weight>normal</weight>
+   </font>
+   <left/>
+   <top/>
+   <data>
+    <query>Context Query</query>
+    <column>report_date</column>
+   </data>
+  </field>
+  <label>
+   <rect>
+    <x>0</x>
+    <y>45</y>
+    <width>40</width>
+    <height>25</height>
+   </rect>
+   <font>
+    <face></face>
+    <size>-1</size>
+    <weight>normal</weight>
+   </font>
+   <left/>
+   <top/>
+   <string>Date:</string>
+  </label>
+  <field>
+   <rect>
+    <x>70</x>
+    <y>100</y>
+    <width>100</width>
+    <height>25</height>
+   </rect>
+   <font>
+    <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+    <size>10</size>
+    <weight>normal</weight>
+   </font>
+   <left/>
+   <bottom/>
+   <data>
+    <query>head</query>
+    <column>driver</column>
+   </data>
+  </field>
+  <label>
+   <rect>
+    <x>5</x>
+    <y>100</y>
+    <width>65</width>
+    <height>25</height>
+   </rect>
+   <font>
+    <face>Arial</face>
+    <size>14</size>
+    <weight>normal</weight>
+   </font>
+   <left/>
+   <bottom/>
+   <string>Driver:</string>
+  </label>
+  <label>
+   <rect>
+    <x>5</x>
+    <y>125</y>
+    <width>125</width>
+    <height>25</height>
+   </rect>
+   <font>
+    <face>Arial</face>
+    <size>14</size>
+    <weight>normal</weight>
+   </font>
+   <left/>
+   <bottom/>
+   <string>Date To Ship:</string>
+  </label>
+  <field>
+   <rect>
+    <x>135</x>
+    <y>125</y>
+    <width>100</width>
+    <height>25</height>
+   </rect>
+   <font>
+    <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+    <size>10</size>
+    <weight>normal</weight>
+   </font>
+   <left/>
+   <bottom/>
+   <data>
+    <query>head</query>
+    <column>shipdate</column>
+   </data>
+  </field>
+ </rpthead>
+ <section>
+  <name>detail</name>
+  <group>
+   <name>footer</name>
+   <column></column>
+   <foot>
+    <height>35</height>
+    <field>
+     <rect>
+      <x>680</x>
+      <y>5</y>
+      <width>115</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+      <size>10</size>
+      <weight>normal</weight>
+     </font>
+     <right/>
+     <bottom/>
+     <data>
+      <query>detail</query>
+      <column>weight</column>
+     </data>
+     <format builtin="true">weight</format>
+     <tracktotal/>
+    </field>
+    <label>
+     <rect>
+      <x>630</x>
+      <y>5</y>
+      <width>40</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face>MS Shell Dlg 2</face>
+      <size>12</size>
+      <weight>normal</weight>
+     </font>
+     <left/>
+     <bottom/>
+     <string>Total:</string>
+    </label>
+    <line>
+     <xstart>630</xstart>
+     <ystart>5</ystart>
+     <xend>800</xend>
+     <yend>5</yend>
+     <weight>1</weight>
+    </line>
+    <line>
+     <xstart>630</xstart>
+     <ystart>35</ystart>
+     <xend>800</xend>
+     <yend>35</yend>
+     <weight>1</weight>
+    </line>
+   </foot>
+  </group>
+  <group>
+   <name>cust</name>
+   <column>cust_id</column>
+   <head>
+    <height>80</height>
+    <field>
+     <rect>
+      <x>10</x>
+      <y>5</y>
+      <width>155</width>
+      <height>45</height>
+     </rect>
+     <font>
+      <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+      <size>10</size>
+      <weight>bold</weight>
+     </font>
+     <wordwrap/>
+     <left/>
+     <top/>
+     <data>
+      <query>detail</query>
+      <column>cust</column>
+     </data>
+    </field>
+    <field>
+     <rect>
+      <x>220</x>
+      <y>5</y>
+      <width>275</width>
+      <height>45</height>
+     </rect>
+     <font>
+      <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+      <size>10</size>
+      <weight>normal</weight>
+     </font>
+     <wordwrap/>
+     <left/>
+     <top/>
+     <data>
+      <query>detail</query>
+      <column>cohead_shiptoaddress1</column>
+     </data>
+    </field>
+    <label>
+     <rect>
+      <x>35</x>
+      <y>35</y>
+      <width>100</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face>MS Shell Dlg 2</face>
+      <size>11</size>
+      <weight>bold</weight>
+     </font>
+     <left/>
+     <top/>
+     <string>SO#</string>
+    </label>
+    <label>
+     <rect>
+      <x>55</x>
+      <y>60</y>
+      <width>100</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face>MS Shell Dlg 2</face>
+      <size>10</size>
+      <weight>bold</weight>
+     </font>
+     <left/>
+     <top/>
+     <string>Line Number</string>
+    </label>
+    <label>
+     <rect>
+      <x>175</x>
+      <y>45</y>
+      <width>100</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face>MS Shell Dlg 2</face>
+      <size>8</size>
+      <weight>bold</weight>
+     </font>
+     <hcenter/>
+     <top/>
+     <string>Item</string>
+    </label>
+    <label>
+     <rect>
+      <x>175</x>
+      <y>60</y>
+      <width>100</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face>MS Shell Dlg 2</face>
+      <size>8</size>
+      <weight>bold</weight>
+     </font>
+     <hcenter/>
+     <top/>
+     <string>item Description</string>
+    </label>
+    <label>
+     <rect>
+      <x>350</x>
+      <y>60</y>
+      <width>60</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face>MS Shell Dlg 2</face>
+      <size>8</size>
+      <weight>bold</weight>
+     </font>
+     <right/>
+     <top/>
+     <string>On Order</string>
+    </label>
+    <label>
+     <rect>
+      <x>440</x>
+      <y>60</y>
+      <width>50</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face>MS Shell Dlg 2</face>
+      <size>8</size>
+      <weight>bold</weight>
+     </font>
+     <hcenter/>
+     <top/>
+     <string>UOM</string>
+    </label>
+    <label>
+     <rect>
+      <x>495</x>
+      <y>60</y>
+      <width>65</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face>MS Shell Dlg 2</face>
+      <size>8</size>
+      <weight>bold</weight>
+     </font>
+     <right/>
+     <top/>
+     <string>Weight Ord</string>
+    </label>
+    <label>
+     <rect>
+      <x>565</x>
+      <y>60</y>
+      <width>60</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face>MS Shell Dlg 2</face>
+      <size>8</size>
+      <weight>bold</weight>
+     </font>
+     <right/>
+     <top/>
+     <string>To Load</string>
+    </label>
+    <label>
+     <rect>
+      <x>560</x>
+      <y>40</y>
+      <width>65</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face>MS Shell Dlg 2</face>
+      <size>8</size>
+      <weight>bold</weight>
+     </font>
+     <right/>
+     <top/>
+     <string>Assigned</string>
+    </label>
+    <line>
+     <xstart>0</xstart>
+     <ystart>80</ystart>
+     <xend>800</xend>
+     <yend>80</yend>
+     <weight>2</weight>
+    </line>
+   </head>
+  </group>
+  <detail>
+   <key>
+    <query>detail</query>
+   </key>
+   <height>50</height>
+   <field>
+    <rect>
+     <x>30</x>
+     <y>5</y>
+     <width>100</width>
+     <height>25</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <left/>
+    <top/>
+    <data>
+     <query>detail</query>
+     <column>cohead_number</column>
+    </data>
+   </field>
+   <field>
+    <rect>
+     <x>70</x>
+     <y>5</y>
+     <width>100</width>
+     <height>25</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <left/>
+    <top/>
+    <data>
+     <query>detail</query>
+     <column>linenumber</column>
+    </data>
+   </field>
+   <field>
+    <rect>
+     <x>155</x>
+     <y>15</y>
+     <width>225</width>
+     <height>35</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <wordwrap/>
+    <left/>
+    <top/>
+    <data>
+     <query>detail</query>
+     <column>descrip</column>
+    </data>
+   </field>
+   <field>
+    <rect>
+     <x>335</x>
+     <y>15</y>
+     <width>85</width>
+     <height>25</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <right/>
+    <top/>
+    <data>
+     <query>detail</query>
+     <column>ordered</column>
+    </data>
+   </field>
+   <field>
+    <rect>
+     <x>460</x>
+     <y>15</y>
+     <width>95</width>
+     <height>25</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <right/>
+    <top/>
+    <data>
+     <query>detail</query>
+     <column>weight</column>
+    </data>
+   </field>
+   <line>
+    <xstart>-1</xstart>
+    <ystart>49</ystart>
+    <xend>799</xend>
+    <yend>49</yend>
+    <weight>1</weight>
+   </line>
+   <field>
+    <rect>
+     <x>155</x>
+     <y>0</y>
+     <width>180</width>
+     <height>25</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <left/>
+    <top/>
+    <data>
+     <query>detail</query>
+     <column>itemid</column>
+    </data>
+   </field>
+   <field>
+    <rect>
+     <x>555</x>
+     <y>15</y>
+     <width>70</width>
+     <height>25</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <right/>
+    <top/>
+    <data>
+     <query>detail</query>
+     <column>toship</column>
+    </data>
+   </field>
+   <field>
+    <rect>
+     <x>430</x>
+     <y>15</y>
+     <width>50</width>
+     <height>25</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <hcenter/>
+    <top/>
+    <data>
+     <query>detail</query>
+     <column>uom</column>
+    </data>
+   </field>
+   <field>
+    <rect>
+     <x>425</x>
+     <y>15</y>
+     <width>20</width>
+     <height>25</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <left/>
+    <top/>
+    <data>
+     <query>detail</query>
+     <column>status</column>
+    </data>
+   </field>
+  </detail>
+ </section>
+ <section>
+  <name>substitute</name>
+  <group>
+   <name>header</name>
+   <column></column>
+   <head>
+    <height>80</height>
+    <line>
+     <xstart>0</xstart>
+     <ystart>15</ystart>
+     <xend>800</xend>
+     <yend>15</yend>
+     <weight>3</weight>
+     <style>2</style>
+    </line>
+    <label>
+     <rect>
+      <x>5</x>
+      <y>25</y>
+      <width>195</width>
+      <height>30</height>
+     </rect>
+     <font>
+      <face>MS Shell Dlg 2</face>
+      <size>16</size>
+      <weight>normal</weight>
+     </font>
+     <left/>
+     <top/>
+     <string>Possible Substutions</string>
+    </label>
+    <line>
+     <xstart>0</xstart>
+     <ystart>75</ystart>
+     <xend>800</xend>
+     <yend>75</yend>
+     <weight>1</weight>
+    </line>
+    <label>
+     <rect>
+      <x>5</x>
+      <y>55</y>
+      <width>100</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face></face>
+      <size>-1</size>
+      <weight>normal</weight>
+     </font>
+     <left/>
+     <top/>
+     <string>Customer</string>
+    </label>
+    <label>
+     <rect>
+      <x>90</x>
+      <y>55</y>
+      <width>100</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face></face>
+      <size>-1</size>
+      <weight>normal</weight>
+     </font>
+     <left/>
+     <top/>
+     <string>Ship To</string>
+    </label>
+    <label>
+     <rect>
+      <x>185</x>
+      <y>55</y>
+      <width>165</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face></face>
+      <size>-1</size>
+      <weight>normal</weight>
+     </font>
+     <left/>
+     <top/>
+     <string>Address</string>
+    </label>
+    <label>
+     <rect>
+      <x>300</x>
+      <y>55</y>
+      <width>70</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face></face>
+      <size>-1</size>
+      <weight>normal</weight>
+     </font>
+     <left/>
+     <top/>
+     <string>Sales Item</string>
+    </label>
+    <label>
+     <rect>
+      <x>395</x>
+      <y>55</y>
+      <width>60</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face></face>
+      <size>-1</size>
+      <weight>normal</weight>
+     </font>
+     <right/>
+     <top/>
+     <string>On Order</string>
+    </label>
+    <label>
+     <rect>
+      <x>460</x>
+      <y>55</y>
+      <width>40</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face></face>
+      <size>-1</size>
+      <weight>normal</weight>
+     </font>
+     <left/>
+     <top/>
+     <string>UOM</string>
+    </label>
+    <label>
+     <rect>
+      <x>515</x>
+      <y>30</y>
+      <width>100</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face></face>
+      <size>-1</size>
+      <weight>normal</weight>
+     </font>
+     <hcenter/>
+     <top/>
+     <string>Item</string>
+    </label>
+    <label>
+     <rect>
+      <x>515</x>
+      <y>55</y>
+      <width>100</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face></face>
+      <size>-1</size>
+      <weight>normal</weight>
+     </font>
+     <hcenter/>
+     <top/>
+     <string>Description</string>
+    </label>
+    <label>
+     <rect>
+      <x>745</x>
+      <y>55</y>
+      <width>55</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face></face>
+      <size>-1</size>
+      <weight>normal</weight>
+     </font>
+     <right/>
+     <top/>
+     <string>Weight</string>
+    </label>
+    <label>
+     <rect>
+      <x>635</x>
+      <y>55</y>
+      <width>45</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face></face>
+      <size>-1</size>
+      <weight>normal</weight>
+     </font>
+     <left/>
+     <top/>
+     <string>QOH</string>
+    </label>
+    <label>
+     <rect>
+      <x>690</x>
+      <y>55</y>
+      <width>65</width>
+      <height>25</height>
+     </rect>
+     <font>
+      <face></face>
+      <size>-1</size>
+      <weight>normal</weight>
+     </font>
+     <left/>
+     <top/>
+     <string>UOM</string>
+    </label>
+   </head>
+  </group>
+  <detail>
+   <key>
+    <query>substitution</query>
+   </key>
+   <height>45</height>
+   <line>
+    <xstart>0</xstart>
+    <ystart>45</ystart>
+    <xend>800</xend>
+    <yend>45</yend>
+    <weight>1</weight>
+    <style>2</style>
+   </line>
+   <field>
+    <rect>
+     <x>95</x>
+     <y>5</y>
+     <width>160</width>
+     <height>25</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <left/>
+    <top/>
+    <data>
+     <query>substitution</query>
+     <column>cohead_shiptoname</column>
+    </data>
+   </field>
+   <field>
+    <rect>
+     <x>190</x>
+     <y>25</y>
+     <width>520</width>
+     <height>25</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <left/>
+    <top/>
+    <data>
+     <query>substitution</query>
+     <column>cohead_shiptoaddress1</column>
+    </data>
+   </field>
+   <field>
+    <rect>
+     <x>285</x>
+     <y>5</y>
+     <width>100</width>
+     <height>25</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <hcenter/>
+    <top/>
+    <data>
+     <query>substitution</query>
+     <column>salesitem</column>
+    </data>
+   </field>
+   <field>
+    <rect>
+     <x>385</x>
+     <y>5</y>
+     <width>70</width>
+     <height>25</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <right/>
+    <top/>
+    <data>
+     <query>substitution</query>
+     <column>onorder</column>
+    </data>
+    <format builtin="true">qty</format>
+   </field>
+   <field>
+    <rect>
+     <x>460</x>
+     <y>5</y>
+     <width>40</width>
+     <height>25</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <left/>
+    <top/>
+    <data>
+     <query>substitution</query>
+     <column>uom</column>
+    </data>
+   </field>
+   <field>
+    <rect>
+     <x>480</x>
+     <y>25</y>
+     <width>225</width>
+     <height>25</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <left/>
+    <top/>
+    <data>
+     <query>substitution</query>
+     <column>descrip</column>
+    </data>
+   </field>
+   <field>
+    <rect>
+     <x>710</x>
+     <y>20</y>
+     <width>90</width>
+     <height>25</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <right/>
+    <top/>
+    <data>
+     <query>substitution</query>
+     <column>weight</column>
+    </data>
+    <format builtin="true">weight</format>
+   </field>
+   <field>
+    <rect>
+     <x>0</x>
+     <y>5</y>
+     <width>85</width>
+     <height>40</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <wordwrap/>
+    <left/>
+    <top/>
+    <data>
+     <query>substitution</query>
+     <column>cust_name</column>
+    </data>
+   </field>
+   <field>
+    <rect>
+     <x>515</x>
+     <y>5</y>
+     <width>100</width>
+     <height>25</height>
+    </rect>
+    <font>
+     <face>Open Sans,Helvetica,Verdana,sans-serif</face>
+     <size>10</size>
+     <weight>normal</weight>
+    </font>
+    <left/>
+    <top/>
+    <data>
+     <query>substitution</query>
+     <column>itemid</column>
+    </data>
+   </field>
+  </detail>
+ </section>
+</report>

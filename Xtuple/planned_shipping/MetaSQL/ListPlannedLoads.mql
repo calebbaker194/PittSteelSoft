@@ -1,0 +1,58 @@
+﻿-- Group: PlannedLoad
+-- Name:  ListPlannedLoads
+-- Notes: List The planned Loads
+SELECT 
+	plannedshiphead_id AS plannedshiphead_id,
+	plannedshiphead_number AS loadNumber,
+	plannedshiphead_driver AS driver,
+	plannedshiphead_datetoship AS dateToShip,
+	pounds AS weight
+	
+FROM
+	plannedshiphead 
+    JOIN (
+     SELECT 
+	sum(itemuomtouom(item_id,coitem_qty_uom_id,4,plannedshipitem_qty)) AS pounds ,
+	plannedshipitem_plannedshiphead_id AS id 
+     FROM 
+	plannedshipitem
+     JOIN coitem ON(plannedshipitem_coitem_id=coitem_id)
+     JOIN itemsite ON(coitem_itemsite_id=itemsite_id)
+     JOIN item ON(itemsite_item_id=item_id)
+
+     GROUP BY plannedshipitem_plannedshiphead_id) TotalWeight ON(plannedshiphead_id=id) 
+
+WHERE true
+	<?if exists('plannedshiphead_number')?>
+		AND plannedshiphead_number LIKE (<? value('plannedshiphead_number')?>||'%')
+	<? endif ?>
+	<?if exists('date')?>
+		AND plannedshiphead_datetoship=<? value('date')?>
+	<? endif ?>
+	<?if exists('driver')?>
+		AND plannedshiphead_driver = <? value('driver')?>
+	<? endif ?>
+	<?if exists('cohead_number')?>
+		AND plannedshiphead_id IN(SELECT 
+					plannedshipitem_plannedshiphead_id AS planedshiphead_id
+				   FROM
+						plannedshipitem
+    				   JOIN coitem ON(plannedshipitem_coitem_id=coitem_id)
+    				   JOIN cohead ON(coitem_cohead_id=cohead_id)
+		
+				   WHERE 
+					cohead_number||'' LIKE <? value('cohead_number')?>||'%'
+				   GROUP BY plannedshipitem_plannedshiphead_id)
+	<? endif ?>
+	<?if exists('cust_id')?>
+		AND plannedshiphead_id IN(SELECT 
+					plannedshipitem_plannedshiphead_id AS plannedshiphead_id
+				      FROM
+					plannedshipitem
+     				      JOIN coitem ON(plannedshipitem_coitem_id=coitem_id)
+    				      JOIN cohead ON(coitem_cohead_id=cohead_id)
+				      WHERE cohead_cust_id=<? value('cust_id')?>	
+
+				      GROUP BY plannedshipitem_plannedshiphead_id,cohead_cust_id)
+	<? endif ?>
+

@@ -1,0 +1,98 @@
+﻿
+--CUSTOMER HEADER
+SELECT
+	cust_name AS cust,
+	cohead_shiptoname,
+	cohead_shiptoaddress1,
+	--
+	'' AS cohead_number,
+	--
+	'' AS linenumber,
+	'' AS ordered,
+	'' AS shipped,
+	'' AS toship,
+	'' AS uom,
+	'' AS itemid,
+	'' AS descrip,
+	'' AS weight,
+	--
+	cust_id AS orderbycus,
+	'-1' AS orderby
+FROM
+	plannedshiphead
+     JOIN plannedshipitem ON(plannedshiphead_id=plannedshipitem_plannedshiphead_id)
+     JOIN coitem ON(plannedshipitem_coitem_id=coitem_id)
+     JOIN cohead ON(coitem_cohead_id=cohead_id)
+     JOIN custinfo ON(cohead_cust_id=cust_id)
+
+WHERE
+	plannedshiphead_id=<?value('plannedshiphead_id')?>
+
+GROUP BY cust_id,cohead_id
+
+UNION
+--SALES ORDER SUB REPORT
+SELECT
+	'' AS cust,
+	'' AS cohead_shiptoname,
+	'' AS cohead_shiptoaddress1,
+	--
+	cohead_number,
+	--
+	'' AS linenumber,
+	'' AS ordered,
+	'' AS shipped,
+	'' AS toship,
+	'' AS uom,
+	'' AS itemid,
+	'' AS descrip,
+	'' AS weight,
+	--
+	cust_id AS orderbycus,
+	cohead_id AS orderby
+FROM
+	plannedshiphead
+     JOIN plannedshipitem ON(plannedshiphead_id=plannedshipitem_plannedshiphead_id)
+     JOIN coitem ON(plannedshipitem_coitem_id=coitem_id)
+     JOIN cohead ON(coitem_cohead_id=cohead_id)
+     JOIN custinfo ON(cohead_cust_id=cust_id)
+
+WHERE
+	plannedshiphead_id=<?value('plannedshiphead_id')?>
+
+UNION
+--LINE ITEM 
+SELECT
+	'' AS cust,
+	'' AS cohead_shiptoname,
+	'' AS cohead_shiptoaddress1,
+	--
+	'' AS cohead_number,
+	--
+	coitem_linenumber || '' AS linenumber,
+	coitem_qtyord || '' AS ordered,
+	coitem_qtyshipped || '' AS shipped,
+	plannedshipitem_qty || '' AS toship,
+	CASE
+	WHEN coitem_qty_uom_id=7 THEN 'EA'
+	ELSE 'LB'
+	END AS uom,
+	item_number || '' AS itemid,
+	item_descrip1 AS descrip,
+	( itemuomtouom(item_id,coitem_qty_uom_id,4,plannedshipitem_qty) ) || '' AS weight,
+	--
+	cust_id AS orderbycus,
+	coitem_cohead_id AS orderby
+FROM
+	plannedshiphead
+     JOIN plannedshipitem ON(plannedshiphead_id=plannedshipitem_plannedshiphead_id)
+     JOIN coitem ON(plannedshipitem_coitem_id=coitem_id)
+     JOIN cohead ON(coitem_cohead_id=cohead_id)
+     JOIN custinfo ON(cohead_cust_id=cust_id)
+     JOIN itemsite ON(coitem_itemsite_id=itemsite_id)
+     JOIN item ON(itemsite_item_id=item_id)
+
+WHERE
+	plannedshiphead_id=<?value('plannedshiphead_id')?>
+
+ORDER BY orderbycus,orderby,linenumber

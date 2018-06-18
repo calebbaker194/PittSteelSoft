@@ -1,0 +1,20 @@
+-- Table: plannedshiphead
+
+-- DROP TABLE plannedshiphead;
+
+CREATE TABLE plannedshiphead
+(
+  plannedshiphead_id serial NOT NULL,
+  plannedshiphead_number text,
+  plannedshiphead_notess text,
+  plannedshiphead_datetoship date,
+  plannedshiphead_driver text,
+  CONSTRAINT plannedshiphead_pkey PRIMARY KEY (plannedshiphead_id)
+)
+WITH (
+  OIDS=FALSE
+);
+ALTER TABLE plannedshiphead
+  OWNER TO xtrole;
+COMMENT ON TABLE plannedshiphead
+  IS 'Created for the plannig load extension that nestor designed';

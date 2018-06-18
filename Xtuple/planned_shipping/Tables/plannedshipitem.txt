@@ -1,0 +1,28 @@
+-- Table: plannedshipitem
+
+-- DROP TABLE plannedshipitem;
+
+CREATE TABLE plannedshipitem
+(
+  plannedshipitem_id serial NOT NULL,
+  plannedshipitem_plannedshiphead_id integer NOT NULL,
+  plannedshipitem_item_id integer NOT NULL,
+  plannedshipitem_qty integer,
+  plannedshipitem_number text NOT NULL,
+  plannedshipitem_cust_id integer,
+  CONSTRAINT plannedshipitem_pkey PRIMARY KEY (plannedshipitem_id),
+  CONSTRAINT plannedshipitem_plannedshipitem_cust_id_fkey FOREIGN KEY (plannedshipitem_cust_id)
+      REFERENCES custinfo (cust_id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION,
+  CONSTRAINT plannedshipitem_plannedshipitem_item_id_fkey FOREIGN KEY (plannedshipitem_item_id)
+      REFERENCES item (item_id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION,
+  CONSTRAINT plannedshipitem_plannedshipitem_plannedshiphead_id_fkey FOREIGN KEY (plannedshipitem_plannedshiphead_id)
+      REFERENCES plannedshiphead (plannedshiphead_id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION
+)
+WITH (
+  OIDS=FALSE
+);
+ALTER TABLE plannedshipitem
+  OWNER TO xtrole;

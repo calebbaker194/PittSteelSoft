@@ -1,0 +1,4 @@
+﻿-- Group: PlannedLoad
+-- Name:  SavePlannedLoad
+-- Notes: to insert planned loads into database
+INSERT INTO plannedshiphead (plannedshiphead_number,plannedshiphead_notes,plannedshiphead_datetoship,plannedshiphead_driver) 
